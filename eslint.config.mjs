@@ -11,6 +11,31 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    files: [
+      "src/components/**/*",
+      "src/hooks/**/*", 
+      "src/app/**/page.tsx",
+      "src/app/**/layout.tsx",
+      "src/app/**/*client*",
+      "**/*client*",
+      "**/*browser*",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/env",
+              message: "Import env in server files only; use NEXT_PUBLIC_ vars in client.",
+            },
+          ],
+          patterns: [],
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;
