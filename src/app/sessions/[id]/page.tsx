@@ -86,11 +86,7 @@ async function addTrickToSession(formData: FormData) {
   redirect(`/sessions/${sessionId}`);
 }
 
-type PageProps = {
-  params: { id: string };
-};
-
-export default async function SessionDetailPage({ params }: PageProps) {
+export default async function SessionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -101,7 +97,8 @@ export default async function SessionDetailPage({ params }: PageProps) {
     redirect('/login');
   }
 
-  const sessionId = params.id;
+  const { id } = await params;
+  const sessionId = id;
 
   // 1) Load the session (RLS ensures it's the user's)
   const { data: session, error: sessionError } = await supabase
