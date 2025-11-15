@@ -5,7 +5,8 @@ import { createServerClient } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Replace with your generated Database type later if you want
-type Database = unknown;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Database = any;
 
 export async function createServerSupabaseClient(): Promise<SupabaseClient<Database>> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

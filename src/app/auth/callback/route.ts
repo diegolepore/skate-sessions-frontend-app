@@ -4,7 +4,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
-  const next = url.searchParams.get('next') ?? '/me';
+  const next = url.searchParams.get('next') ?? '/sessions';
 
   if (!code) {
     // No code? Just send them back to login.
