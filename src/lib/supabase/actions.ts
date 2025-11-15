@@ -1,5 +1,8 @@
 "use server";
 
+import { redirect } from 'next/navigation';
+import { createServerSupabaseClient } from './server';
+
 export async function pingSupabase() {
   try {
     // Real connection test - make an actual HTTP request to Supabase
@@ -40,4 +43,11 @@ export async function pingSupabase() {
     console.error('Ping Supabase error:', error);
     throw error;
   }
+}
+
+// Sign the current user out and redirect to the login page
+export async function signOut() {
+  const supabase = await createServerSupabaseClient();
+  await supabase.auth.signOut();
+  redirect('/login');
 }
