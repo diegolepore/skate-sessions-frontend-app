@@ -1,6 +1,6 @@
 "use client";
 
-import { pingSupabase } from "@/lib/actions";
+import { pingSupabase } from "@/lib/supabase/actions";
 
 export default function SupabasePing() {
   const handlePing = async () => {
