@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 
 interface SessionRow {
   id: string;
@@ -157,12 +158,12 @@ export default async function SessionsPage() {
                 className="border rounded-lg px-4 py-3 flex flex-col gap-1"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <a
+                  <Link
                     href={`/sessions/${s.id}`}
                     className="font-medium underline-offset-2 hover:underline"
                   >
                     {s.title}
-                  </a>
+                  </Link>
                   <span className="text-xs text-neutral-500">
                     {formatDateLabel(s.planned_for_date, s.created_at)}
                   </span>

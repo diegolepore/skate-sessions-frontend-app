@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import Link from 'next/link';
 
 export default async function MePage() {
   const supabase = await createServerSupabaseClient();
@@ -11,9 +12,9 @@ export default async function MePage() {
     return (
       <div className="max-w-md mx-auto mt-16 px-4">
         <p className="text-lg">You are not logged in.</p>
-        <a href="/login" className="text-blue-600 underline mt-2 inline-block">
+        <Link href="/login" className="text-blue-600 underline mt-2 inline-block">
           Go to login
-        </a>
+        </Link>
       </div>
     );
   }

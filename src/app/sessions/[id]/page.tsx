@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
+import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 interface Session {
@@ -162,12 +163,12 @@ export default async function SessionDetailPage({ params }: PageProps) {
   return (
     <div className="max-w-2xl mx-auto mt-12 px-4 space-y-8">
       <header className="space-y-1">
-        <a
+        <Link
           href="/sessions"
           className="text-sm text-blue-600 hover:underline inline-block mb-2"
         >
           ← Back to all sessions
-        </a>
+        </Link>
         <h1 className="text-2xl font-bold">{typedSession.title}</h1>
         <p className="text-sm text-neutral-500">
           {typedSession.spot_name && (
