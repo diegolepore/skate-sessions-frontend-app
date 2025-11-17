@@ -1,32 +1,12 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import type { Tables } from '@/lib/supabase/types';
 
-interface Session {
-  id: string;
-  title: string;
-  spot_name: string | null;
-  planned_for_date: string | null;
-  created_at: string;
-};
-
-interface Trick {
-  id: number;
-  name: string;
-  obstacle: string;
-  stance: string;
-  difficulty: number;
-};
-
-interface SessionTrick {
-  id: number;
-  order_index: number;
-  target_attempts: number | null;
-  notes: string | null;
-  tricks: Trick;
-};
-
-
+type Session = Tables<'sessions'>;
+type Trick = Tables<'tricks'>;
+type SessionTrick = Tables<'session_tricks'>;
+type SessionTrickWithTrick = SessionTrick & { tricks: Trick | null };
 
 // Server action to add a trick to this session
 async function addTrickToSession(formData: FormData) {
@@ -35,6 +15,7 @@ async function addTrickToSession(formData: FormData) {
   const sessionId = formData.get('session_id');
   const trickIdRaw = formData.get('trick_id');
   const attemptsRaw = formData.get('target_attempts');
+  const notes = formData.get('notes');
 
   if (typeof sessionId !== 'string' || !sessionId) {
     redirect('/sessions');
@@ -72,11 +53,13 @@ async function addTrickToSession(formData: FormData) {
 
   const nextOrderIndex = (count ?? 0) + 1;
 
-  const { error } = await supabase.from('session_tricks').insert({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any).from('session_tricks').insert({
     session_id: sessionId,
     trick_id: trickId,
     order_index: nextOrderIndex,
     target_attempts: targetAttempts,
+    notes: typeof notes === 'string' ? notes : null,
   });
 
   if (error) {
@@ -137,12 +120,11 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
     )
     .eq('session_id', sessionId)
     .order('order_index', { ascending: true });
-
   if (stError) {
     console.error('Error loading session_tricks:', stError);
   }
 
-  const sessionTricks = (sessionTricksData ?? []) as unknown as SessionTrick[];
+  const sessionTricks = (sessionTricksData ?? []) as unknown as SessionTrickWithTrick[];
 
   // 3) Load full tricks catalog for the dropdown
   const { data: tricksData, error: tricksError } = await supabase
@@ -175,10 +157,11 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
             </>
           )}
           {typedSession.planned_for_date
-            ? `Planned: ${new Date(
+            && `Planned: ${new Date(
                 typedSession.planned_for_date
-              ).toLocaleDateString()}`
-            : `Created: ${new Date(
+              ).toLocaleDateString()}`}
+          {typedSession.created_at
+            && `Created: ${new Date(
                 typedSession.created_at
               ).toLocaleDateString()}`}
         </p>
@@ -238,6 +221,16 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
               />
             </div>
 
+            <div>
+              <textarea
+                id="notes"
+                name="notes"
+                rows={3}
+                className="w-full border rounded px-3 py-2"
+                placeholder="Notes about this trick in this session (optional)"
+              />
+            </div>
+
             <button
               type="submit"
               className="rounded bg-black text-white px-4 py-2 text-sm font-medium"
@@ -282,7 +275,20 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
                         ? ` · ${st.target_attempts} attempts`
                         : ''}
                     </span>
+                    <div>
+                      {st.notes}
+                    </div>
                   </div>
+                  <form action={removeSessionTrick}>
+                    <input type="hidden" name="session_id" value={typedSession.id} />
+                    <input type="hidden" name="session_trick_id" value={String(st.id)} />
+                    <button
+                      type="submit"
+                      className="text-xs text-red-600 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </form>
                 </li>
               );
             })}
@@ -291,4 +297,40 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
       </section>
     </div>
   );
+}
+
+async function removeSessionTrick(formData: FormData) {
+  'use server';
+
+  const sessionId = formData.get('session_id');
+  const sessionTrickIdRaw = formData.get('session_trick_id');
+
+  const stId = typeof sessionTrickIdRaw === 'string' ? Number(sessionTrickIdRaw) : NaN;
+  if (!Number.isFinite(stId)) {
+    redirect(`/sessions/${sessionId}`);
+  }
+
+  const supabase = await createServerSupabaseClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+  
+  // Delete the session_trick entry
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from('session_tricks')
+    .delete()
+    .eq('id', stId)
+    .eq('session_id', sessionId);
+
+  if (error) {
+    console.error('Error deleting session_trick:', error);
+  }
+
+  redirect(`/sessions/${sessionId}`);
 }

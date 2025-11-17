@@ -2,15 +2,16 @@
 
 import 'client-only'
 import { createBrowserClient } from '@supabase/ssr'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database as RawDatabase } from '@/lib/supabase/types';
 
-// Replace with your generated Database type later if you want
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Database = any
+// Strip the internal metadata from Database for the client
+type Database = Omit<RawDatabase, '__InternalSupabase'>;
 
-let browserClient : SupabaseClient<Database> | null = null
+type TypedSupabaseClient = ReturnType<typeof createBrowserClient<Database>>
 
-export function createBrowserSupabaseClient() {
+let browserClient : TypedSupabaseClient | null = null
+
+export function createBrowserSupabaseClient(): TypedSupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 

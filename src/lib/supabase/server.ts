@@ -2,13 +2,12 @@ import 'server-only';
 
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database as RawDatabase } from '@/lib/supabase/types';
 
-// Replace with your generated Database type later if you want
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Database = any;
+// Strip the internal metadata from Database for the client
+type Database = Omit<RawDatabase, '__InternalSupabase'>;
 
-export async function createServerSupabaseClient(): Promise<SupabaseClient<Database>> {
+export async function createServerSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -40,6 +39,4 @@ export async function createServerSupabaseClient(): Promise<SupabaseClient<Datab
   });
 
   return client;
-
-
 }

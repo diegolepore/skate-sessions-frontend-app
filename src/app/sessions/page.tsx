@@ -1,15 +1,10 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import type { Tables, TablesInsert } from '@/lib/supabase/types';
 
-interface SessionRow {
-  id: string;
-  title: string;
-  spot_name: string | null;
-  planned_for_date: string | null;
-  created_at: string;
-};
-
+type SessionRow = Tables<'sessions'>;
+type SessionInsert = TablesInsert<'sessions'>;
 // Server action to create a new session
 async function createSession(formData: FormData) {
   'use server';
@@ -33,15 +28,11 @@ async function createSession(formData: FormData) {
     redirect('/sessions');
   }
 
-  const insertPayload: {
-    user_id: string;
-    title: string;
-    spot_name?: string | null;
-    planned_for_date?: string | null;
-  } = {
+ // Example payload: prefer letting DB set defaults like id/created_at
+  const insertPayload: SessionInsert = {
     user_id: user!.id,
     title: title.trim(),
-  };
+  }
 
   if (typeof spotName === 'string' && spotName.trim()) {
     insertPayload.spot_name = spotName.trim();
@@ -51,7 +42,8 @@ async function createSession(formData: FormData) {
     insertPayload.planned_for_date = plannedForDate;
   }
 
-  const { error } = await supabase.from('sessions').insert(insertPayload);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any).from('sessions').insert(insertPayload);
 
   if (error) {
     console.error('Error inserting session:', error);
@@ -182,19 +174,22 @@ export default async function SessionsPage() {
   );
 }
 
-function formatDateLabel(plannedForDate: string | null, createdAt: string): string {
+function formatDateLabel(plannedForDate: string | null, createdAt: string | null): string {  
   if (plannedForDate) {
     try {
       return `Planned: ${new Date(plannedForDate).toLocaleDateString()}`;
     } catch {
-      // Fallback
       return `Planned: ${plannedForDate}`;
     }
   }
 
-  try {
-    return `Created: ${new Date(createdAt).toLocaleDateString()}`;
-  } catch {
-    return `Created: ${createdAt}`;
+  if(createdAt) {
+    try {
+      return `Created: ${new Date(createdAt).toLocaleDateString()}`;
+    } catch {
+      return `Created: ${createdAt}`;
+    }
   }
+
+  return '';
 }

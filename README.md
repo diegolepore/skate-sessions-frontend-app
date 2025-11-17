@@ -62,3 +62,12 @@ Guardrails:
 src/components/**, src/hooks/**, src/app/**/page.tsx, src/app/**/layout.tsx, *client* files.
 	•	Litmus test: “Will this module execute in the browser?”
 Yes → use NEXT_PUBLIC_*; No → you may use @/env.
+
+
+<!-- 
+Use the generated Database type
+
+bash/zsh:
+export SUPABASE_ACCESS_TOKEN="your_token_here"
+npx supabase gen types typescript --project-id syzofcjptcapeyqxromc --schema public > src/lib/supabase/types.ts 
+-->
