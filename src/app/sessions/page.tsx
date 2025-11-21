@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import type { Tables, TablesInsert } from '@/lib/supabase/types';
+import PlannedDatePicker from '@/components/PlannedDatePicker';
 
 type SessionRow = Tables<'sessions'>;
 type SessionInsert = TablesInsert<'sessions'>;
@@ -113,17 +114,7 @@ export default async function SessionsPage() {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1" htmlFor="planned_for_date">
-              Planned date (optional)
-            </label>
-            <input
-              id="planned_for_date"
-              name="planned_for_date"
-              type="date"
-              className="border rounded px-3 py-2"
-            />
-          </div>
+          <PlannedDatePicker />
 
           <button
             type="submit"
@@ -165,6 +156,15 @@ export default async function SessionsPage() {
                     Spot: <span className="font-medium">{s.spot_name}</span>
                   </p>
                 )}
+                  <form action={removeSession}>
+                    <input type="hidden" name="session_id" value={s.id} />
+                    <button
+                      type="submit"
+                      className="text-xs text-red-600 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </form>
               </li>
             ))}
           </ul>
@@ -192,4 +192,33 @@ function formatDateLabel(plannedForDate: string | null, createdAt: string | null
   }
 
   return '';
+}
+
+async function removeSession(formData: FormData) {
+  'use server';
+
+  const sessionId = formData.get('session_id');
+
+  const supabase = await createServerSupabaseClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+  
+  // Delete the session_trick entry
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from('sessions')
+    .delete()
+    .eq('id', sessionId);
+
+  if (error) {
+    console.error('Error deleting session:', error);
+  }
+
+  redirect(`/sessions`);
 }
