@@ -7,6 +7,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Prefer explicit deployment base URL if provided, fall back to runtime origin.
+  // This prevents localhost leaking into OAuth state when running on Vercel.
+  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : ''))?.replace(/\/$/, '');
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -18,8 +21,8 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        // This must match an allowed redirect URL in Supabase → URL Configuration
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // Must match an allowed redirect URL (Auth → Settings → Redirect URLs)
+        emailRedirectTo: `${baseUrl}/auth/callback`,
       },
     });
 
@@ -42,7 +45,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/sessions`,
+          redirectTo: `${baseUrl}/auth/callback?next=/sessions`,
         },
       });
       if (error) {
