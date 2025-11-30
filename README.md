@@ -63,11 +63,93 @@ src/components/**, src/hooks/**, src/app/**/page.tsx, src/app/**/layout.tsx, *cl
 	•	Litmus test: “Will this module execute in the browser?”
 Yes → use NEXT_PUBLIC_*; No → you may use @/env.
 
+## Supabase Type Generation (Keeping Types in Sync)
 
-<!-- 
-Use the generated Database type
+Regenerate the TypeScript types after any schema migration (add/drop column, nullability change).
 
-bash/zsh:
-export SUPABASE_ACCESS_TOKEN="your_token_here"
-npx supabase gen types typescript --project-id syzofcjptcapeyqxromc --schema public > src/lib/supabase/types.ts 
--->
+### One-off Generation
+
+```bash
+supabase login            # Opens browser to authenticate (stores token locally)
+supabase gen types typescript \
+	--project-id YOUR_PROJECT_ID \
+	--schema public > src/lib/supabase/types.ts
+```
+
+If you prefer `npx` (no global install):
+```bash
+npx supabase login
+npx supabase gen types typescript --project-id YOUR_PROJECT_ID --schema public > src/lib/supabase/types.ts
+```
+
+### Using an Access Token (CI or Non-interactive)
+
+```bash
+export SUPABASE_ACCESS_TOKEN=YOUR_ACCESS_TOKEN
+npx supabase gen types typescript --project-id YOUR_PROJECT_ID --schema public > src/lib/supabase/types.ts
+```
+
+### Optional `package.json` Script
+
+Add:
+```jsonc
+"scripts": {
+	"types:gen": "supabase gen types typescript --project-id YOUR_PROJECT_ID --schema public > src/lib/supabase/types.ts"
+}
+```
+Run:
+```bash
+npm run types:gen
+```
+
+### After Regeneration
+
+```bash
+npm run build   # Surfacing type errors introduced by schema changes
+git diff src/lib/supabase/types.ts
+```
+Fix any queries referencing removed/renamed columns.
+
+## Auth Redirect Configuration (Prevent Localhost Leakage)
+
+Define a public site base URL to ensure OAuth always returns to production:
+
+In Vercel Project Settings → Environment Variables:
+```
+NEXT_PUBLIC_SITE_URL=https://YOUR_DEPLOYED_DOMAIN
+```
+
+In Supabase Dashboard → Authentication → URL Configuration:
+```
+Site URL: https://YOUR_DEPLOYED_DOMAIN
+Redirect URLs:
+	https://YOUR_DEPLOYED_DOMAIN/auth/callback
+```
+
+### Building Redirect Targets in Code
+
+Use an explicit base (example shown in `login/page.tsx`):
+```ts
+const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, '');
+// Magic link
+emailRedirectTo: `${baseUrl}/auth/callback`
+// Google OAuth
+redirectTo: `${baseUrl}/auth/callback?next=/sessions`
+```
+
+This prevents `http://localhost:3000` from appearing in the Supabase OAuth state when running on production.
+
+## Common Pitfalls
+
+- Forgot `supabase login` → "Access token not provided" error.
+- Missing `NEXT_PUBLIC_SITE_URL` → fallback may capture preview/local origin.
+- Stale service role key rotated → server actions fail silently.
+- Not updating allowed redirect URLs after adding new query params (e.g. `?next=/sessions`).
+
+## Quick Checklist
+
+- [ ] Run migrations
+- [ ] `npm run types:gen`
+- [ ] `npm run build` (fix type errors)
+- [ ] Update Supabase Auth Site/Redirect URLs if domain changed
+- [ ] Commit regenerated `types.ts`

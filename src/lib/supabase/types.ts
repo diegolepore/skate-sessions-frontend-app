@@ -34,27 +34,33 @@ export type Database = {
       }
       session_tricks: {
         Row: {
+          completed_at: string | null
           id: number
+          landed_attempts: number
           notes: string | null
           order_index: number
           session_id: string
-          target_attempts: number | null
+          target_attempts: number
           trick_id: number
         }
         Insert: {
+          completed_at?: string | null
           id?: number
+          landed_attempts?: number
           notes?: string | null
           order_index: number
           session_id: string
-          target_attempts?: number | null
+          target_attempts?: number
           trick_id: number
         }
         Update: {
+          completed_at?: string | null
           id?: number
+          landed_attempts?: number
           notes?: string | null
           order_index?: number
           session_id?: string
-          target_attempts?: number | null
+          target_attempts?: number
           trick_id?: number
         }
         Relationships: [
@@ -104,30 +110,21 @@ export type Database = {
       tricks: {
         Row: {
           created_at: string | null
-          difficulty: number
           id: number
           name: string
           notes: string | null
-          obstacle: string
-          stance: string
         }
         Insert: {
           created_at?: string | null
-          difficulty: number
           id?: number
           name: string
           notes?: string | null
-          obstacle: string
-          stance?: string
         }
         Update: {
           created_at?: string | null
-          difficulty?: number
           id?: number
           name?: string
           notes?: string | null
-          obstacle?: string
-          stance?: string
         }
         Relationships: []
       }

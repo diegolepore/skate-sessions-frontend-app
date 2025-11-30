@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type { Tables } from '@/lib/supabase/types';
+import SessionTrickItem from './SessionTrickItem';
 
 type Session = Tables<'sessions'>;
 type Trick = Tables<'tricks'>;
@@ -19,6 +20,7 @@ async function addTrickToSession(formData: FormData) {
   const sessionId = formData.get('session_id');
   const trickIdRaw = formData.get('trick_id');
   const attemptsRaw = formData.get('target_attempts');
+  const landedAttemptsRaw = formData.get('landed_attempts');
   const notes = formData.get('notes');
 
   if (typeof sessionId !== 'string' || !sessionId) {
@@ -29,6 +31,11 @@ async function addTrickToSession(formData: FormData) {
   const targetAttempts =
     typeof attemptsRaw === 'string' && attemptsRaw.trim()
       ? Number(attemptsRaw)
+      : null;
+
+  const landedAttempts =
+    typeof landedAttemptsRaw === 'string' && landedAttemptsRaw.trim()
+      ? Number(landedAttemptsRaw)
       : null;
 
   if (!Number.isFinite(trickId)) {
@@ -63,6 +70,7 @@ async function addTrickToSession(formData: FormData) {
     trick_id: trickId,
     order_index: nextOrderIndex,
     target_attempts: targetAttempts,
+    landed_attempts: landedAttempts,
     notes: typeof notes === 'string' ? notes : null,
   });
 
@@ -112,6 +120,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
       id,
       order_index,
       target_attempts,
+      landed_attempts,
       notes,
       completed_at,
       tricks (
@@ -218,12 +227,31 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
                 htmlFor="target_attempts"
                 className="block text-sm font-medium mb-1"
               >
-                Target attempts (optional)
+                Target attempts
               </label>
               <input
                 id="target_attempts"
                 name="target_attempts"
                 type="number"
+                required
+                min={1}
+                className="border rounded px-3 py-2 w-32"
+                placeholder="10"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="landed_attempts"
+                className="block text-sm font-medium mb-1"
+              >
+                Landed attempts
+              </label>
+              <input
+                id="landed_attempts"
+                name="landed_attempts"
+                type="number"
+                required
                 min={1}
                 className="border rounded px-3 py-2 w-32"
                 placeholder="10"
@@ -269,131 +297,11 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
                 return null;
               }
 
-              const isCompleted = !!st.completed_at;
-              return (
-                <li
-                  key={st.id}
-                  className="border rounded-lg px-3 py-2 flex flex-col gap-1"
-                >
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="font-medium">
-                      {trick.name} · {trick.obstacle}
-                    </span>
-                    <span className="text-xs text-neutral-500">
-                      Diff {trick.difficulty}
-                      {st.target_attempts
-                        ? ` · ${st.target_attempts} attempts`
-                        : ''}
-                    </span>
-                    <div>
-                      {st.notes}
-                    </div>
-                    <form action={toggleSessionTrickCompletion} className="ml-2 flex items-center">
-                      <input type="hidden" name="session_id" value={typedSession.id} />
-                      <input type="hidden" name="session_trick_id" value={String(st.id)} />
-                      <input type="hidden" name="desired" value={isCompleted ? 'incomplete' : 'complete'} />
-                      <button
-                        type="submit"
-                        aria-pressed={isCompleted}
-                        aria-label={isCompleted ? 'Mark trick incomplete' : 'Mark trick complete'}
-                        className={`w-5 h-5 rounded border flex items-center justify-center text-xs transition-colors ${isCompleted ? 'bg-green-600 border-green-600 text-white' : 'bg-white hover:bg-neutral-100'} `}
-                      >
-                        {isCompleted ? '✅' : '☑'}
-                      </button>
-                    </form>
-                  </div>
-                  <form action={removeSessionTrick}>
-                    <input type="hidden" name="session_id" value={typedSession.id} />
-                    <input type="hidden" name="session_trick_id" value={String(st.id)} />
-                    <button
-                      type="submit"
-                      className="text-xs text-red-600 hover:underline"
-                    >
-                      Remove
-                    </button>
-                  </form>
-                </li>
-              );
+              return <SessionTrickItem key={st.id} sessionTrick={st} sessionId={typedSession.id} />;
             })}
           </ol>
         )}
       </section>
     </div>
   );
-}
-
-async function removeSessionTrick(formData: FormData) {
-  'use server';
-
-  const sessionId = formData.get('session_id');
-  const sessionTrickIdRaw = formData.get('session_trick_id');
-
-  const stId = typeof sessionTrickIdRaw === 'string' ? Number(sessionTrickIdRaw) : NaN;
-  if (!Number.isFinite(stId)) {
-    redirect(`/sessions/${sessionId}`);
-  }
-
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
-  }
-  
-  // Delete the session_trick entry
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
-    .from('session_tricks')
-    .delete()
-    .eq('id', stId)
-    .eq('session_id', sessionId);
-
-  if (error) {
-    console.error('Error deleting session_trick:', error);
-  }
-
-  redirect(`/sessions/${sessionId}`);
-}
-
-// Toggle completion state: set completed_at to NOW() or NULL
-async function toggleSessionTrickCompletion(formData: FormData) {
-  'use server';
-
-  const sessionId = formData.get('session_id');
-  const sessionTrickIdRaw = formData.get('session_trick_id');
-  const desired = formData.get('desired'); // 'complete' | 'incomplete'
-
-  if (typeof sessionId !== 'string' || !sessionId) {
-    redirect('/sessions');
-  }
-  const stId = typeof sessionTrickIdRaw === 'string' ? Number(sessionTrickIdRaw) : NaN;
-  if (!Number.isFinite(stId)) {
-    redirect(`/sessions/${sessionId}`);
-  }
-
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
-  }
-
-  const updateValue = desired === 'complete' ? new Date().toISOString() : null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
-    .from('session_tricks')
-    .update({ completed_at: updateValue })
-    .eq('id', stId)
-    .eq('session_id', sessionId);
-
-  if (error) {
-    console.error('Error updating completion:', error);
-  }
-
-  redirect(`/sessions/${sessionId}`);
 }
