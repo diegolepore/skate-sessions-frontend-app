@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import type { Tables, TablesInsert } from '@/lib/supabase/types';
 import PlannedDatePicker from '@/components/PlannedDatePicker';
+import ConfirmButton from '@/components/ConfirmButton';
 
 type SessionRow = Tables<'sessions'>;
 type SessionInsert = TablesInsert<'sessions'>;
@@ -158,12 +159,13 @@ export default async function SessionsPage() {
                 )}
                   <form action={removeSession}>
                     <input type="hidden" name="session_id" value={s.id} />
-                    <button
+                    <ConfirmButton
                       type="submit"
                       className="text-xs text-red-600 hover:underline"
+                      message="Are you sure you want to remove this session?"
                     >
                       Remove
-                    </button>
+                    </ConfirmButton>
                   </form>
               </li>
             ))}
